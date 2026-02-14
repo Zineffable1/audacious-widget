@@ -8,7 +8,7 @@ audtool
 
 I made this to work in conjunction with the status icon plugin included in the audacious plugins package.  
 That plugins scroll function was not working for me so I made this.  
-I still have the plugin enabled for now as to allow for hiding the program.  
+I still have the plugin enabled for now as to allow for hiding the program; but I just hide it with system tray settings.
 
 
 Clicking the icon plays/pauses.  
