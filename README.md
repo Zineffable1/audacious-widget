@@ -2,8 +2,7 @@
 A KDE Plasma 6 Widget for the Audacious music player.  
 
 DEPENDENCIES  
-wmctrl  
-audtool  
+qdbus, which should be on a Plasma 6 widget
 
 
 I made this to work in conjunction with the status icon plugin included in the audacious plugins package.  
