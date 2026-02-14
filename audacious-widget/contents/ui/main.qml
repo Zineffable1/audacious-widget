@@ -15,107 +15,172 @@ PlasmoidItem {
     property string trackAlbum: ""
     property string trackYear: ""
     property bool isPlaying: false
+    property int pendingSeek: 0  // Milliseconds to seek when we get Position
+    property int trackPosition: 0  // Current position in seconds
+    property int trackLength: 0  // Total track length in seconds
+    property int tooltipTicker: 0  // Increments every second to force tooltip refresh
     
     Plasma5Support.DataSource {
-        id: executable
-        engine: "executable"
-        connectedSources: []
+    id: executable
+    engine: "executable"
+    connectedSources: []
+
+    onNewData: (sourceName, data) => {
+        let stdout = (data["stdout"] || "").trim()
+        let exitCode = data["exit code"]
+
+        let cunt = sourceName
+   
         
-        onNewData: (sourceName, data) => {
-            let stdout = data["stdout"].trim()
-            let exitCode = data["exit code"]
+        
+        // 1️⃣ Check if Audacious is running
+        if (sourceName.includes("pgrep -x audacious")) {
+                
+            if (stdout.length > 0) {
+                // Running → now check if window is visible via DBus
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.MainWinVisible")
+            } else {
+                // Not running → start it
+                executable.exec("audacious")
+            }
+
+        // 2️⃣ Window visibility check via DBus
+        } else if (sourceName.includes("MainWinVisible")) {
+
+            if (stdout === "true") {
+                // Window visible → hide it
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.ShowMainWin false")
+            } else {
+                // Window hidden → show it
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.ShowMainWin true")
+            }
+
+        } else if (sourceName.includes("org.atheme.audacious.Volume")) {
+
+            // Volume returns "left_vol right_vol", we just need one value
+            if (stdout.length > 0) {
+                let vol = parseInt(stdout.split(' ')[0])
+                currentVolume = vol
+            }
+
+        } else if (sourceName.includes("SongTuple") && sourceName.includes("title")) {
+
+            trackTitle = stdout || "Not playing"
+
+        } else if (sourceName.includes("SongTuple") && sourceName.includes("artist")) {
+
+            trackArtist = stdout
+
+        } else if (sourceName.includes("SongTuple") && sourceName.includes("album")) {
+
+            trackAlbum = stdout
+
+        } else if (sourceName.includes("SongTuple") && sourceName.includes("year")) {
+
+            trackYear = stdout
+
+        } else if (sourceName.includes("org.atheme.audacious.Status")) {
+
+            isPlaying = (stdout === "playing")
             
-            console.log("DataSource got:", sourceName, "stdout:", stdout, "exitCode:", exitCode)
+        } else if (sourceName.includes("org.atheme.audacious.Time")) {
             
-            if (sourceName.includes("pgrep -x audacious")) {
-                // Double-click triggered: check if audacious is running
-                if (exitCode === 0) {
-                    // Running, now check window state
-                    console.log("Audacious running, checking window state")
-                    executable.exec("audtool mainwin-show")
-                } else {
-                    // Not running, start it
-                    console.log("Audacious not running, starting")
-                    executable.exec("audacious")
-                }
-            } else if (sourceName.includes("audtool mainwin-show") && !sourceName.includes("tuple") && !sourceName.includes("get-")) {
-                // Got window state, toggle it
-                console.log("Window state is:", stdout)
-                if (stdout === "on") {
-                    console.log("Hiding window")
-                    executable.exec("audtool mainwin-show off")
-                } else {
-                    console.log("Showing window")
-                    executable.exec("audtool mainwin-show on")
-                }
-            } else if (sourceName.includes("get-volume")) {
-                if (stdout.length > 0) {
-                    currentVolume = parseInt(stdout)
-                }
-            } else if (sourceName.includes("tuple-data title")) {
-                trackTitle = stdout || "Not playing"
-            } else if (sourceName.includes("tuple-data artist")) {
-                trackArtist = stdout
-            } else if (sourceName.includes("tuple-data album")) {
-                trackAlbum = stdout
-            } else if (sourceName.includes("tuple-data year")) {
-                trackYear = stdout
-            } else if (sourceName.includes("playback-status")) {
-                isPlaying = (stdout === "playing")
+            // Check if this is for seeking or for tooltip updates
+            if (root.pendingSeek !== 0) {
+                // This was called for seeking - Time returns milliseconds
+                let currentTimeMs = parseInt(stdout)
+                let newTimeMs = currentTimeMs + root.pendingSeek
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Seek " + newTimeMs)
+                root.pendingSeek = 0
+            } else {
+                // This is for tooltip - convert milliseconds to seconds
+                trackPosition = Math.floor(parseInt(stdout) / 1000)
             }
             
-            disconnectSource(sourceName)
+        } else if (sourceName.includes("SongLength")) {
+            
+            // SongLength returns length in SECONDS already (not milliseconds!)
+            trackLength = parseInt(stdout)
+            
+        } else if (sourceName.includes("org.atheme.audacious.Position")) {
+            
+            // Check if this is for seeking or for getting current track
+            if (root.pendingSeek !== 0) {
+                // This was for seeking
+                let currentPos = parseInt(stdout)
+                let newPos = currentPos + root.pendingSeek
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Seek " + newPos)
+                root.pendingSeek = 0
+            } else {
+                // This is for getting current track info - Position() returns current track index
+                let trackPos = parseInt(stdout)
+                if (trackPos !== root.currentTrackIndex) {
+                    root.currentTrackIndex = trackPos
+                }
+                // Always fetch track info for current position
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.SongTuple " + trackPos + " title")
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.SongTuple " + trackPos + " artist")
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.SongTuple " + trackPos + " album")
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.SongTuple " + trackPos + " year")
+                executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.SongLength " + trackPos)
+            }
         }
-        
-        function exec(cmd) {
-            connectSource(cmd)
+
+        disconnectSource(sourceName)
+    }
+
+    function exec(cmd) {
+        connectSource(cmd)
+    }
+}
+    
+    Timer {
+        id: updateTimer
+        interval: 1000  // Update every second for smooth progress bar
+        running: false  // Don't run by default, only when hovering
+        repeat: true
+        onTriggered: {
+            executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Volume")
+            executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Position")
+            executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Status")
+            executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Time")
+            tooltipTicker++  // Force tooltip refresh
         }
     }
     
-    Timer {
-        interval: 2000
-        running: true
-        repeat: true
-        onTriggered: {
-            executable.exec("audtool get-volume")
-            executable.exec("audtool current-song-tuple-data title")
-            executable.exec("audtool current-song-tuple-data artist")
-            executable.exec("audtool current-song-tuple-data album")
-            executable.exec("audtool current-song-tuple-data year")
-            executable.exec("audtool playback-status")
-        }
+    property int currentTrackIndex: 0  // Track which song is playing
+    
+    function formatTime(seconds) {
+        let mins = Math.floor(seconds / 60)
+        let secs = seconds % 60
+        return mins + ":" + (secs < 10 ? "0" : "") + secs
     }
     
     function adjustVolume(delta) {
-        console.log("adjustVolume called, delta:", delta, "currentVolume:", currentVolume)
         let newVol = Math.max(0, Math.min(100, currentVolume + delta))
-        console.log("newVol:", newVol)
-        let cmd = "audtool set-volume " + newVol
-        console.log("executing:", cmd)
-        executable.exec(cmd)
+        // SetVolume takes left and right channel volumes
+        executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.SetVolume " + newVol + " " + newVol)
         currentVolume = newVol
     }
     
     function togglePlayPause() {
-        executable.exec("audtool playback-playpause")
+        executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.PlayPause")
     }
     
     function nextTrack() {
-        executable.exec("audtool playlist-advance")
+        executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Advance")
     }
     
     function prevTrack() {
-        executable.exec("audtool playlist-reverse")
+        executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Reverse")
     }
     
     function seekTrack(seconds) {
         if (isPlaying) {
-            // Get current position and seek relative to it
-            if (seconds > 0) {
-                executable.exec("audtool playback-seek-relative +" + seconds)
-            } else {
-                executable.exec("audtool playback-seek-relative " + seconds)
-            }
+            // Get current time position (in ms) and add/subtract
+            executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Time")
+            // Store seek amount for when we get Time back
+            root.pendingSeek = seconds * 1000  // Convert to milliseconds
         }
     }
     
@@ -127,7 +192,13 @@ PlasmoidItem {
         let prefix = plasmoid.configuration.showEmojis
         if (trackArtist) info += (prefix ? "🎤 " : "") + trackArtist + "<br/>"
         if (trackAlbum) info += (prefix ? "💿 " : "") + trackAlbum + (trackYear ? " (" + trackYear + ")" : "") + "<br/>"
-        info += "<br/>" + (prefix ? "🔊 " : "") + "Volume: " + currentVolume + "%"
+        
+        // Add time if playing
+        if (isPlaying && trackLength > 0) {
+            info += formatTime(trackPosition) + " / " + formatTime(trackLength) + "<br/>"
+        }
+        
+        info += (prefix ? "🔊 " : "") + "Volume: " + currentVolume + "%"
         return info
     }
     
@@ -159,7 +230,7 @@ PlasmoidItem {
         PlasmaCore.Action {
             text: "Quit Audacious"
             icon.name: "application-exit"
-            onTriggered: executable.exec("audtool shutdown")
+            onTriggered: executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Quit")
         }
     ]
     
@@ -175,6 +246,24 @@ PlasmoidItem {
             source: "audacious"
         }
         
+        HoverHandler {
+            id: hoverHandler
+            
+            onHoveredChanged: {
+                if (hovered) {
+                    // Fetch data immediately via DBus (use Position() to get current playing track)
+                    executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Volume")
+                    executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Position")
+                    executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Status")
+                    executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Time")
+                    // Start timer for continuous updates
+                    updateTimer.start()
+                } else {
+                    updateTimer.stop()
+                }
+            }
+        }
+        
         TapHandler {
             acceptedButtons: Qt.LeftButton
             
@@ -188,9 +277,8 @@ PlasmoidItem {
             onDoubleTapped: {
                 singleTapTimer.stop()
                 tapPending = false
-                console.log("Double click - checking Audacious state")
                 
-                // First check if running, store result and act on it
+                // Check if running, then use DBus to check/toggle visibility
                 executable.exec("pgrep -x audacious")
             }
         }
@@ -201,7 +289,6 @@ PlasmoidItem {
             onTriggered: {
                 if (compactRoot.tapPending) {
                     compactRoot.tapPending = false
-                    console.log("Single click - toggle play/pause")
                     togglePlayPause()
                 }
             }
@@ -212,10 +299,6 @@ PlasmoidItem {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             
             onWheel: (event) => {
-                console.log("=== WHEEL EVENT ===")
-                console.log("angleDelta.y:", event.angleDelta.y)
-                console.log("angleDelta.x:", event.angleDelta.x)
-                console.log("modifiers:", event.modifiers)
                 
                 // Check for shift modifier OR horizontal scroll
                 let isShiftOrHorizontal = (event.modifiers & Qt.ShiftModifier) || (event.angleDelta.x !== 0)
@@ -225,28 +308,23 @@ PlasmoidItem {
                 
                 // Choose action based on whether shift/horizontal
                 let action = isShiftOrHorizontal ? plasmoid.configuration.shiftScrollAction : plasmoid.configuration.scrollAction
-                console.log("action:", action, "(0=track, 1=volume, 2=seek)")
                 
                 // Execute the action
                 if (action === 0) {
                     // Change track
                     if (delta > 0) {
-                        console.log("Next track")
                         nextTrack()
                     } else {
-                        console.log("Previous track")
                         prevTrack()
                     }
                 } else if (action === 1) {
                     // Change volume
                     let volumeDelta = delta > 0 ? 5 : -5
-                    console.log("Adjusting volume:", volumeDelta)
                     adjustVolume(volumeDelta)
                 } else if (action === 2) {
                     // Seek
                     if (root.isPlaying) {
                         let seekAmount = (delta > 0 ? 1 : -1) * plasmoid.configuration.seekStepSeconds
-                        console.log("Seeking:", seekAmount, "seconds")
                         seekTrack(seekAmount)
                     }
                 }
