@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Claude"
+            }
+        ],
+        "Category": "Multimedia",
+        "Description": "Control Audacious with scroll wheel support",
+        "Icon": "audacious",
+        "Id": "audacious-widget",
+        "Name": "Audacious Control",
+        "Version": "1.0",
+        "Website": ""
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-KDE-ParentApp": ""
+}
