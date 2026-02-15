@@ -15,6 +15,7 @@ PlasmoidItem {
     property string trackAlbum: ""
     property string trackYear: ""
     property bool isPlaying: false
+    property bool isAudaciousRunning: false  // Track if Audacious is running
     property int pendingSeek: 0  // Milliseconds to seek when we get Position
     property int trackPosition: 0  // Current position in seconds
     property int trackLength: 0  // Total track length in seconds
@@ -32,15 +33,20 @@ PlasmoidItem {
         let cunt = sourceName
    
         
+        // Handle periodic check for context menu
+        if (sourceName.includes("echo 'running'") || sourceName.includes("echo 'stopped'")) {
+            root.isAudaciousRunning = (stdout === "running")
         
-        // 1️⃣ Check if Audacious is running
-        if (sourceName.includes("pgrep -x audacious")) {
+        // 1️⃣ Check if Audacious is running (from double-click)
+        } else if (sourceName.includes("pgrep -x audacious")) {
                 
             if (stdout.length > 0) {
-                // Running → now check if window is visible via DBus
+                // Running → update state and check if window is visible via DBus
+                root.isAudaciousRunning = true
                 executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.MainWinVisible")
             } else {
-                // Not running → start it
+                // Not running → update state and start it
+                root.isAudaciousRunning = false
                 executable.exec("audacious")
             }
 
@@ -148,6 +154,21 @@ PlasmoidItem {
         }
     }
     
+    // Timer to periodically check if Audacious is running (for dynamic context menu)
+    Timer {
+        id: audaciousCheckTimer
+        interval: 3000  // Check every 3 seconds
+        running: true
+        repeat: true
+        onTriggered: {
+            // Use a simple pgrep check without triggering window actions
+            executable.exec("pgrep -x audacious > /dev/null && echo 'running' || echo 'stopped'")
+        }
+    }
+    
+    // Handle the periodic check differently from double-click
+    property bool lastCheckResult: false
+    
     property int currentTrackIndex: 0  // Track which song is playing
     
     function formatTime(seconds) {
@@ -202,37 +223,118 @@ PlasmoidItem {
         return info
     }
     
-    // Context menu
-    Plasmoid.contextualActions: [
-        PlasmaCore.Action {
-            text: isPlaying ? "Pause" : "Play"
-            icon.name: isPlaying ? "media-playback-pause" : "media-playback-start"
-            onTriggered: togglePlayPause()
-        },
-        PlasmaCore.Action {
-            text: "Stop"
-            icon.name: "media-playback-stop"
-            onTriggered: executable.exec("audtool playback-stop")
-        },
-        PlasmaCore.Action {
-            text: "Previous"
-            icon.name: "media-skip-backward"
-            onTriggered: prevTrack()
-        },
-        PlasmaCore.Action {
-            text: "Next"
-            icon.name: "media-skip-forward"
-            onTriggered: nextTrack()
-        },
-        PlasmaCore.Action {
-            isSeparator: true
-        },
-        PlasmaCore.Action {
-            text: "Quit Audacious"
-            icon.name: "application-exit"
-            onTriggered: executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Quit")
+    // Dynamic context menu
+    Component.onCompleted: {
+        updateContextMenu()
+    }
+    
+    onIsAudaciousRunningChanged: {
+        updateContextMenu()
+    }
+    
+    onIsPlayingChanged: {
+        if (isAudaciousRunning) {
+            updateContextMenu()
         }
-    ]
+    }
+    
+    Connections {
+        target: plasmoid.configuration
+        function onMenuOrderChanged() {
+            updateContextMenu()
+        }
+    }
+    
+    function updateContextMenu() {
+        if (isAudaciousRunning) {
+            let order = plasmoid.configuration.menuOrder || "play,stop,prev,next,separator,close,quit"
+            let items = order.split(',')
+            let actions = []
+            
+            let actionMap = {
+                'play': playPauseAction,
+                'stop': stopAction,
+                'prev': previousAction,
+                'next': nextAction,
+                'separator': separatorAction,
+                'close': closeWindowAction,
+                'quit': quitAction
+            }
+            
+            for (let i = 0; i < items.length; i++) {
+                let action = actionMap[items[i]]
+                if (action) {
+                    actions.push(action)
+                }
+            }
+            
+            Plasmoid.contextualActions = actions
+        } else {
+            Plasmoid.contextualActions = [openAction]
+        }
+    }
+    
+    PlasmaCore.Action {
+        id: openAction
+        text: "Open Audacious"
+        icon.name: "audacious"
+        onTriggered: {
+            executable.exec("audacious")
+            root.isAudaciousRunning = true
+        }
+    }
+    
+    PlasmaCore.Action {
+        id: playPauseAction
+        text: isPlaying ? "Pause" : "Play"
+        icon.name: isPlaying ? "media-playback-pause" : "media-playback-start"
+        onTriggered: togglePlayPause()
+    }
+    
+    PlasmaCore.Action {
+        id: stopAction
+        text: "Stop"
+        icon.name: "media-playback-stop"
+        onTriggered: executable.exec("audtool playback-stop")
+    }
+    
+    PlasmaCore.Action {
+        id: previousAction
+        text: "Previous"
+        icon.name: "media-skip-backward"
+        onTriggered: prevTrack()
+    }
+    
+    PlasmaCore.Action {
+        id: nextAction
+        text: "Next"
+        icon.name: "media-skip-forward"
+        onTriggered: nextTrack()
+    }
+    
+    PlasmaCore.Action {
+        id: separatorAction
+        isSeparator: true
+    }
+    
+    PlasmaCore.Action {
+        id: closeWindowAction
+        text: "Close Window"
+        icon.name: "window-close"
+        onTriggered: {
+            executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.ShowMainWin false")
+        }
+    }
+    
+    PlasmaCore.Action {
+        id: quitAction
+        text: "Quit Audacious"
+        icon.name: "application-exit"
+        onTriggered: {
+            executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.Quit")
+            root.isAudaciousRunning = false
+        }
+    }
     
     // Compact representation (system tray icon)
     compactRepresentation: Item {

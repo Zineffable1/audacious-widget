@@ -18,5 +18,8 @@
     <entry name="showEmojis" type="Bool">
       <default>true</default>
     </entry>
+    <entry name="menuOrder" type="String">
+      <default>play,stop,prev,next,separator,close,quit</default>
+    </entry>
   </group>
 </kcfg>
