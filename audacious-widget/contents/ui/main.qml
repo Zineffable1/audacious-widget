@@ -207,7 +207,7 @@ PlasmoidItem {
     
     // Simple rich text tooltip
     toolTipTextFormat: Text.RichText
-    toolTipMainText: (plasmoid.configuration.showEmojis ? "🎵 " : "") + trackTitle
+    toolTipMainText: (plasmoid.configuration.showEmojis ? "🎵 " : "") + trackTitle
     toolTipSubText: {
         let info = ""
         let prefix = plasmoid.configuration.showEmojis
@@ -216,7 +216,7 @@ PlasmoidItem {
         
         // Add time if playing
         if (isPlaying && trackLength > 0) {
-            info += formatTime(trackPosition) + " / " + formatTime(trackLength) + "<br/>"
+            info += "⌚ " + formatTime(trackPosition) + " / " + formatTime(trackLength) + "<br/>"
         }
         
         info += (prefix ? "🔊 " : "") + "Volume: " + currentVolume + "%"
