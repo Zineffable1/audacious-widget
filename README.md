@@ -20,11 +20,11 @@ Tooltip that shows current track info and volume %.
 Added current time/total track time indicator to the tooltip.  
 
 
-<img width="469" height="168" alt="image" src="https://github.com/user-attachments/assets/e3ec5299-b8aa-4198-a6b2-ca70ba6904d7" />
+<img width="469" height="168" alt="image" src="https://github.com/user-attachments/assets/e3ec5299-b8aa-4198-a6b2-ca70ba6904d7" />  
 
-<img width="316" height="273" alt="image" src="https://github.com/user-attachments/assets/b4ca4407-d3f1-498e-9ab1-1d3f58eaf80a" />
+<img width="663" height="323" alt="image" src="https://github.com/user-attachments/assets/36d9cfa0-e397-4e14-9e76-0636a54f1f36" />  
 
-<img width="808" height="654" alt="image" src="https://github.com/user-attachments/assets/47215ba0-0353-43bc-8739-6277ecb2b4a2" />
+<img width="808" height="654" alt="image" src="https://github.com/user-attachments/assets/47215ba0-0353-43bc-8739-6277ecb2b4a2" />  
 
 
 
