@@ -24,7 +24,8 @@ Context menu items can be reordered and hidden at the users discression.
 
 <img width="663" height="323" alt="image" src="https://github.com/user-attachments/assets/36d9cfa0-e397-4e14-9e76-0636a54f1f36" />  
 
-<img width="808" height="654" alt="image" src="https://github.com/user-attachments/assets/47215ba0-0353-43bc-8739-6277ecb2b4a2" />  
+<img width="930" height="787" alt="image" src="https://github.com/user-attachments/assets/79e663d4-5c44-48e9-8ce9-f9b69fdffce0" />
+
 
 
 
