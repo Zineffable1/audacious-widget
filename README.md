@@ -13,14 +13,14 @@ That plugins scroll function was not working for me so I made this widget.
 
 
 
-Clicking the icon plays/pauses.    
+Clicking the icon plays/pauses.      
 Double clicking opens up the window if hidden, and if Audacious has not been started yet it starts it up.  
 Changeable scroll functions on the icon, including horizontal or shift + scroll. (Change volume, track, or seek)  
 Tooltip that shows current track info and volume %.  
 Added current time/total track time indicator to the tooltip.  
 
 
-<img width="893" height="220" alt="image" src="https://github.com/user-attachments/assets/1b88cfde-b27d-4eb1-aaaf-af5ef137b21f" />
+<img width="469" height="168" alt="image" src="https://github.com/user-attachments/assets/e3ec5299-b8aa-4198-a6b2-ca70ba6904d7" />
 
 <img width="316" height="273" alt="image" src="https://github.com/user-attachments/assets/b4ca4407-d3f1-498e-9ab1-1d3f58eaf80a" />
 
