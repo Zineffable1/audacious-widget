@@ -21,5 +21,8 @@
     <entry name="menuOrder" type="String">
       <default>play,stop,prev,next,separator,close,quit</default>
     </entry>
+    <entry name="hiddenMenuItems" type="String">
+      <default></default>
+    </entry>
   </group>
 </kcfg>

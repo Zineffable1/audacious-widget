@@ -11,6 +11,7 @@ KCM.SimpleKCM {
     property alias cfg_seekStepSeconds: seekStepSpinBox.value
     property alias cfg_showEmojis: showEmojisCheck.checked
     property string cfg_menuOrder
+    property string cfg_hiddenMenuItems
 
     Kirigami.FormLayout {
         QQC2.ComboBox {
@@ -56,9 +57,19 @@ KCM.SimpleKCM {
                 delegate: RowLayout {
                     spacing: 10
                     
+                    QQC2.CheckBox {
+                        id: visibleCheck
+                        checked: model.visible
+                        onCheckedChanged: {
+                            menuItemsModel.setProperty(index, "visible", checked)
+                            updateHiddenItems()
+                        }
+                    }
+                    
                     QQC2.Label {
                         text: model.display
                         Layout.preferredWidth: 120
+                        opacity: visibleCheck.checked ? 1.0 : 0.5
                     }
                     
                     QQC2.Button {
@@ -91,6 +102,7 @@ KCM.SimpleKCM {
             Kirigami.FormData.label: " "
             onClicked: {
                 cfg_menuOrder = "play,stop,prev,next,separator,close,quit"
+                cfg_hiddenMenuItems = ""
                 loadMenuOrder()
             }
         }
@@ -104,6 +116,7 @@ KCM.SimpleKCM {
         menuItemsModel.clear()
         let order = cfg_menuOrder || "play,stop,prev,next,separator,close,quit"
         let items = order.split(',')
+        let hiddenItems = (cfg_hiddenMenuItems || "").split(',')
         
         let displayNames = {
             'play': 'Play/Pause',
@@ -118,7 +131,8 @@ KCM.SimpleKCM {
         for (let i = 0; i < items.length; i++) {
             menuItemsModel.append({
                 'id': items[i],
-                'display': displayNames[items[i]] || items[i]
+                'display': displayNames[items[i]] || items[i],
+                'visible': !hiddenItems.includes(items[i])
             })
         }
     }
@@ -129,5 +143,16 @@ KCM.SimpleKCM {
             order.push(menuItemsModel.get(i).id)
         }
         cfg_menuOrder = order.join(',')
+    }
+    
+    function updateHiddenItems() {
+        let hidden = []
+        for (let i = 0; i < menuItemsModel.count; i++) {
+            let item = menuItemsModel.get(i)
+            if (!item.visible) {
+                hidden.push(item.id)
+            }
+        }
+        cfg_hiddenMenuItems = hidden.join(',')
     }
 }

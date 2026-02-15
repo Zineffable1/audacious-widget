@@ -46,8 +46,8 @@ PlasmoidItem {
                 executable.exec("qdbus org.atheme.audacious /org/atheme/audacious org.atheme.audacious.MainWinVisible")
             } else {
                 // Not running → update state and start it
-                root.isAudaciousRunning = false
                 executable.exec("audacious")
+                root.isAudaciousRunning = true  // Set immediately for instant menu update
             }
 
         // 2️⃣ Window visibility check via DBus
@@ -243,12 +243,16 @@ PlasmoidItem {
         function onMenuOrderChanged() {
             updateContextMenu()
         }
+        function onHiddenMenuItemsChanged() {
+            updateContextMenu()
+        }
     }
     
     function updateContextMenu() {
         if (isAudaciousRunning) {
             let order = plasmoid.configuration.menuOrder || "play,stop,prev,next,separator,close,quit"
             let items = order.split(',')
+            let hiddenItems = (plasmoid.configuration.hiddenMenuItems || "").split(',')
             let actions = []
             
             let actionMap = {
@@ -262,7 +266,13 @@ PlasmoidItem {
             }
             
             for (let i = 0; i < items.length; i++) {
-                let action = actionMap[items[i]]
+                let itemId = items[i]
+                // Skip hidden items
+                if (hiddenItems.includes(itemId)) {
+                    continue
+                }
+                
+                let action = actionMap[itemId]
                 if (action) {
                     actions.push(action)
                 }
