@@ -18,7 +18,7 @@ Double clicking opens up the window if hidden, and if Audacious has not been sta
 Changeable scroll functions on the icon, including horizontal or shift + scroll. (Change volume, track, or seek)  
 Tooltip that shows current track info and volume %.  
 Added current time/total track time indicator to the tooltip.  
-
+Context menu items can be reordered and hidden at the users discression.  
 
 <img width="469" height="168" alt="image" src="https://github.com/user-attachments/assets/e3ec5299-b8aa-4198-a6b2-ca70ba6904d7" />  
 
