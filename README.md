@@ -9,7 +9,7 @@ I made this to work in conjunction with my file tree search plugin or the status
 If using my file tree plugin you are good to go, but if using the status icon plugin, hide it with system tray settings so you dont have two icons.  
 https://github.com/Zineffable1/audacious-filetree-search  
 
-That plugins scroll function was not working for me so I made this widget. 
+The status icon plugin scroll function was not working for me so I made this widget and fell down a rabbit hole.  
 
 
 
