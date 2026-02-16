@@ -4,6 +4,7 @@ A KDE Plasma 6 Widget for the Audacious music player.
 
 I made this to work in conjunction with my file tree search plugin or the status icon plugin included in the audacious plugins package. 
 If using my file tree plugin you are good to go, but if using the status icon plugin, hide it with system tray settings so you dont have two icons.  
+Both of these plugins have the close to system tray option which works well with this widget.  
 https://github.com/Zineffable1/audacious-filetree-search  
 
 The status icon plugin scroll function was not working for me so I made this widget and fell down a rabbit hole.  
