@@ -1,9 +1,6 @@
 # audacious-widget
 A KDE Plasma 6 Widget for the Audacious music player.  
 
-DEPENDENCIES  
-qdbus, which should come with Plasma 6.  
-
 
 I made this to work in conjunction with my file tree search plugin or the status icon plugin included in the audacious plugins package. 
 If using my file tree plugin you are good to go, but if using the status icon plugin, hide it with system tray settings so you dont have two icons.  
